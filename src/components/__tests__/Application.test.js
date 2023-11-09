@@ -10,7 +10,9 @@ import { fireEvent } from "@testing-library/react";
 
 import { queryByAltText, queryByText, getByText, getAllByTestId, getByAltText, getByPlaceholderText } from "@testing-library/react";
 
-import { prettyDOM } from "@testing-library/react";
+// import { prettyDOM } from "@testing-library/react";
+
+import axios from "axios";
 
 afterEach(cleanup);
 
@@ -87,5 +89,50 @@ describe("Application", () => {
     );
   
     expect(getByText(day, "2 spots remaining")).toBeInTheDocument();
+  });
+
+  it("loads data, edits an interview and keeps the spots remaining for Monday the same", async () => {
+    // 1. Render the Application.
+    const { container, debug } = render(<Application />);
+  
+    // 2. Wait until the text "Archie Cohen" is displayed.
+    await waitForElement(() => getByText(container, "Archie Cohen"));
+  
+    // 3. Find the appointment for "Archie Cohen".
+    const appointment = getAllByTestId(container, "appointment").find(
+      appointment => queryByText(appointment, "Archie Cohen")
+    );
+  
+    // 4. Click the "Edit" button on the booked appointment.
+    fireEvent.click(queryByAltText(appointment, "Edit"));
+  
+    // 5. Change the name to "Lydia Miller-Jones" and click the "Save" button.
+    fireEvent.change(getByPlaceholderText(appointment, /enter student name/i), {
+      target: { value: "Lydia Miller-Jones" }
+    });
+    fireEvent.click(getByText(appointment, "Save"));
+  
+    // 6. Check that the element with the text "Saving" is displayed.
+    expect(getByText(appointment, "Saving")).toBeInTheDocument();
+  
+    // 7. Wait until the element with the "Lydia Miller-Jones" text is displayed.
+    await waitForElement(() => getByText(appointment, "Lydia Miller-Jones"));
+  
+    // 8. Check that the DayListItem with the text "Monday" contains a text indicating spots remaining.
+    const day = getAllByTestId(container, "day").find(day =>
+      queryByText(day, "Monday")
+    );
+  
+    expect(getByText(day, "1 spot remaining")).toBeInTheDocument();
+
+    debug();
+  });  
+
+  it("shows the save error when failing to save an appointment", () => {
+    axios.put.mockRejectedValueOnce();
+  });
+
+  it("shows the delete error when failing to delete an existing appointment", () => {    
+    axios.delete.mockRejectedValueOnce();
   });
 });
